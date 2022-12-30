@@ -6,24 +6,22 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using System.Diagnostics;
 
 namespace Company.Function
 {
     public static class DectalkApi
     {
-        private static bool GenerateTTS(string phrase, string outPath, ILogger log, ExecutionContext context) {
+        private static bool GenerateTTS(string phrase, string outPath, ILogger log, ExecutionContext context)
+        {
             string directory = context.FunctionAppDirectory;
             string lib = Path.Combine(directory, "lib");
             string exePath = Path.Combine(lib, "say.exe");
 
-            foreach (var str in Directory.GetFiles(lib)) {
-                log.LogDebug("1 " + str);
-            }
-
-            try 
+            try
             {
-                System.Diagnostics.Process process = new System.Diagnostics.Process();
+                Process process = new Process();
                 process.StartInfo.FileName = exePath;
                 process.StartInfo.UseShellExecute = false;
                 process.StartInfo.CreateNoWindow = true;
@@ -53,31 +51,35 @@ namespace Company.Function
         [FunctionName("Dectalk")]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req,
-            ILogger log, ExecutionContext context)
+            ILogger log,
+            ExecutionContext context)
         {
+
             string directory = context.FunctionAppDirectory;
             string lib = Path.Combine(directory, "lib");
             string phrase = req.Query["phrase"];
+
+            log.LogInformation($"C# HTTP trigger function processed a request. (executionId: {context.InvocationId}, phrase: {phrase})");
+
             string filePath = Path.Combine(directory, "lib", "out.wav");
             bool success = GenerateTTS(phrase, filePath, log, context);
 
-            foreach (var str in Directory.GetFiles(lib)) {
-                log.LogDebug("2 " + str);
-            }
-
-            if (!success) {
+            if (!success)
+            {
                 log.LogError("failed to generate TTS after 3 seconds");
                 return new BadRequestResult();
             }
 
-            try {
+            try
+            {
                 FileStream fs = File.OpenRead(filePath);
                 return new FileStreamResult(fs, "audio/wav");
             }
-            catch (Exception e) {
+            catch (Exception e)
+            {
                 log.LogError(e.ToString());
                 return new BadRequestResult();
-            }            
+            }
         }
     }
 }
