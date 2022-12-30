@@ -16,7 +16,7 @@ namespace Company.Function
         private static bool GenerateTTS(string phrase, string outPath, ILogger log, ExecutionContext context)
         {
             string directory = context.FunctionAppDirectory;
-            string lib = Path.Combine(directory, "lib");
+            string lib = Path.Combine(directory, "bin", "lib");
             string exePath = Path.Combine(lib, "say.exe");
 
             try
@@ -37,13 +37,20 @@ namespace Company.Function
                 string output = process.StandardOutput.ReadToEnd();
                 string error = process.StandardError.ReadToEnd();
                 bool exited = process.WaitForExit(3000);
-                log.LogInformation("received output: " + output);
-                log.LogError("received error: " + error);
+
+                if (!string.IsNullOrEmpty(output))
+                {
+                    log.LogInformation("received output: " + output);
+                }
+                if (!string.IsNullOrEmpty(error))
+                {
+                    log.LogError("received error: " + error);
+                }
                 return exited;
             }
             catch (Exception ex)
             {
-                log.LogError(ex.ToString());
+                log.LogError($"Error running say.exe: {ex.ToString()}");
                 return false;
             }
         }
@@ -56,12 +63,12 @@ namespace Company.Function
         {
 
             string directory = context.FunctionAppDirectory;
-            string lib = Path.Combine(directory, "lib");
+            string lib = Path.Combine(directory, "bin", "lib");
             string phrase = req.Query["phrase"];
 
             log.LogInformation($"C# HTTP trigger function processed a request. (executionId: {context.InvocationId}, phrase: {phrase})");
 
-            string filePath = Path.Combine(directory, "lib", "out.wav");
+            string filePath = Path.Combine(lib, "out.wav");
             bool success = GenerateTTS(phrase, filePath, log, context);
 
             if (!success)
